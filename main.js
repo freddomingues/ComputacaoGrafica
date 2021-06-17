@@ -54,6 +54,30 @@ let mean = function() {
     context.putImageData(img.imageData, 0, 0);
 }
 
+let median = function() {
+    let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+    let img = new MatrixImage(imageData);
+    for (var i = 0; i < img.width; i++) {
+        for (var j = 0; j < img.height; j++) {
+            var pixel = Array();
+            pixel.push(img.getPixel(i-1,j-1).red);
+            pixel.push(img.getPixel(i-1,j).red);
+            pixel.push(img.getPixel(i,j-1).red);
+            pixel.push(img.getPixel(i+1,j-1).red);
+            pixel.push(img.getPixel(i,j).red);
+            pixel.push(img.getPixel(i-1,j+1).red);
+            pixel.push(img.getPixel(i,j+1).red);
+            pixel.push(img.getPixel(i+1,j).red);
+            pixel.push(img.getPixel(i+1,j+1).red);
+            pixel.sort();
+            var gray = pixel[5];
+    
+            img.setPixel(i, j, new RGBColor(gray, gray, gray));
+        }
+    }
+    context.putImageData(img.imageData, 0, 0);
+}
+
 class RGBColor {
     constructor(r, g, b) {
       this.red = r;
@@ -90,3 +114,4 @@ class MatrixImage {
 document.getElementById('btnLoad').addEventListener('click', load);
 document.getElementById('btnGray').addEventListener('click', grayScale);
 document.getElementById('btnMean').addEventListener('click', mean);
+document.getElementById('btnMedian').addEventListener('click', median);
