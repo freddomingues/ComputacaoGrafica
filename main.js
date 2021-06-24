@@ -18,19 +18,6 @@ let load = function (){
     context.drawImage(image, 0, 0);
 }
 
-/*let grayScaleMean = function() {
-    let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-    let img = new MatrixImage(imageData);
-    for (var i = 0; i < img.width; i++) {
-        for (var j = 0; j < img.height; j++) {
-            var pixel = img.getPixel(i,j);
-            var gray = (pixel.red + pixel.green + pixel.blue) / 3; 
-            img.setPixel(i, j, new RGBColor(gray, gray, gray));
-        }
-    }
-    context.putImageData(img.imageData, 0, 0);
-}*/
-
 let grayScaleMean = function() {
     let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
     let img = new MatrixImage(imageData);
@@ -39,11 +26,11 @@ let grayScaleMean = function() {
             var pixel = Array();
             pixel.push(img.getPixel(i-1,j-1).red);
             pixel.push(img.getPixel(i-1,j).red);
-            pixel.push(img.getPixel(i,j-1).red);
-            pixel.push(img.getPixel(i+1,j-1).red);
-            pixel.push(img.getPixel(i,j).red);
             pixel.push(img.getPixel(i-1,j+1).red);
+            pixel.push(img.getPixel(i,j-1).red);
+            pixel.push(img.getPixel(i,j).red);
             pixel.push(img.getPixel(i,j+1).red);
+            pixel.push(img.getPixel(i+1,j-1).red);
             pixel.push(img.getPixel(i+1,j).red);
             pixel.push(img.getPixel(i+1,j+1).red);
             var gray = pixel.reduce((a, b) => a + b, 0) / 9;
@@ -70,40 +57,35 @@ let grayScaleNTSC = function() {
 let meanSuavization = function() {
     let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
     let img = new MatrixImage(imageData);
-    for (var i = 0; i < img.width; i++) {        //linha  
-        for (var j = 0; j < img.height; j++) {   //coluna
+    for (var i = 0; i < img.width; i++) {        
+        for (var j = 0; j < img.height; j++) {   
             var pixel = Array();
             //pegando os pixels do kernel e colocando no array pixel
             pixel.push(img.getPixel(i-1,j-1));
             pixel.push(img.getPixel(i-1,j));
-            pixel.push(img.getPixel(i,j-1));
-            pixel.push(img.getPixel(i+1,j-1));
-            pixel.push(img.getPixel(i,j));
             pixel.push(img.getPixel(i-1,j+1));
+            pixel.push(img.getPixel(i,j-1));
+            pixel.push(img.getPixel(i,j));
             pixel.push(img.getPixel(i,j+1));
+            pixel.push(img.getPixel(i+1,j-1));
             pixel.push(img.getPixel(i+1,j));
-            pixel.push(img.getPixel(i+1,j+1));
-            
-            var meansRGB = Array();
+            pixel.push(img.getPixel(i+1,j-1));
 
-            //percorrendo o array de pixels e tirando a média do RGB 
-            //de cada pixel e armazenando o valor da media em outro array
+            var reds = Array();
+            var greens = Array();
+            var blues = Array();
+
             for( x = 0; x < pixel.length; x++){
-                var red = pixel[x].red;
-                var blue = pixel[x].blue;
-                var green = pixel[x].green;
-                var meanRGB = (red + blue + green) / 3;
-                meansRGB.push(meanRGB);
+                reds.push(pixel[x].red);
+                greens.push(pixel[x].green);
+                blues.push(pixel[x].blue);
             }
 
-            
-            var sum = 0;
-            for(y = 0; y < meansRGB.length; y++){
-                sum += meansRGB[y];
-            }
+            var redMean = reds.reduce((a,b) => a + b) / reds.length;
+            var greenMean = greens.reduce((a,b) => a + b) / greens.length;
+            var blueMean = blues.reduce((a,b) => a + b) / blues.length;
 
-            var mean = sum / meansRGB.length;
-            img.setPixel(i, j, mean);
+            img.setPixel(i, j, new RGBColor(redMean, greenMean, blueMean));
         }
     }
     context.putImageData(img.imageData, 0, 0);
@@ -115,24 +97,41 @@ let medianSuavization = function() {
     for (var i = 0; i < img.width; i++) {
         for (var j = 0; j < img.height; j++) {
             var pixel = Array();
-            pixel.push(img.getPixel(i-1,j-1).red);
-            pixel.push(img.getPixel(i-1,j).red);
-            pixel.push(img.getPixel(i,j-1).red);
-            pixel.push(img.getPixel(i+1,j-1).red);
-            pixel.push(img.getPixel(i,j).red);
-            pixel.push(img.getPixel(i-1,j+1).red);
-            pixel.push(img.getPixel(i,j+1).red);
-            pixel.push(img.getPixel(i+1,j).red);
-            pixel.push(img.getPixel(i+1,j+1).red);
-            pixel.sort();
-            var color = pixel[4];
+            //pegando os pixels do kernel e colocando no array pixel
+            pixel.push(img.getPixel(i-1,j-1));
+            pixel.push(img.getPixel(i-1,j));
+            pixel.push(img.getPixel(i-1,j+1));
+            pixel.push(img.getPixel(i,j-1));
+            pixel.push(img.getPixel(i,j));
+            pixel.push(img.getPixel(i,j+1));
+            pixel.push(img.getPixel(i+1,j-1));
+            pixel.push(img.getPixel(i+1,j));
+            pixel.push(img.getPixel(i+1,j-1));
+
+            var reds = Array();
+            var greens = Array();
+            var blues = Array();
+
+            for( x = 0; x < pixel.length; x++){
+                reds.push(pixel[x].red);
+                greens.push(pixel[x].green);
+                blues.push(pixel[x].blue);
+            }
+
+            reds.sort();
+            greens.sort();
+            blues.sort();
+
+            var redMedian = reds[4];
+            var greenMedian = greens[4];
+            var blueMedian = blues[4];
     
-            img.setPixel(i, j, new RGBColor(color, color, color));
+            img.setPixel(i, j, new RGBColor(redMedian, greenMedian, blueMedian));
         }
     }
     context.putImageData(img.imageData, 0, 0);
 }
-
+/*
 let gaussianBlur = function() {
     
     let radius = 3;
@@ -196,7 +195,7 @@ let gaussianBlur = function() {
         }
     }
     context.putImageData(img.imageData, 0, 0);
-}
+}*/
 
 class RGBColor {
     constructor(r, g, b) {
