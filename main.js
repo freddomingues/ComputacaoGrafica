@@ -18,7 +18,7 @@ let load = function (){
     context.drawImage(image, 0, 0);
 }
 
-let grayScale = function() {
+/*let grayScaleMean = function() {
     let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
     let img = new MatrixImage(imageData);
     for (var i = 0; i < img.width; i++) {
@@ -29,9 +29,9 @@ let grayScale = function() {
         }
     }
     context.putImageData(img.imageData, 0, 0);
-}
+}*/
 
-let mean = function() {
+let grayScaleMean = function() {
     let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
     let img = new MatrixImage(imageData);
     for (var i = 0; i < img.width; i++) {
@@ -54,7 +54,62 @@ let mean = function() {
     context.putImageData(img.imageData, 0, 0);
 }
 
-let median = function() {
+let grayScaleNTSC = function() {
+    var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+    var data = imageData.data;
+    for (var i = 0; i < data.length; i+=4) {
+        var red = data[i];
+        var green = data[i+1];
+        var blue = data[i+2];
+        var gray = (0.299*red) + (0.587*green) + (0.114*blue); 
+        data[i] = data[i+1] = data[i+2] = gray;
+    }
+    context.putImageData(imageData, 0, 0);
+}
+
+let meanSuavization = function() {
+    let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+    let img = new MatrixImage(imageData);
+    for (var i = 0; i < img.width; i++) {        //linha  
+        for (var j = 0; j < img.height; j++) {   //coluna
+            var pixel = Array();
+            //pegando os pixels do kernel e colocando no array pixel
+            pixel.push(img.getPixel(i-1,j-1));
+            pixel.push(img.getPixel(i-1,j));
+            pixel.push(img.getPixel(i,j-1));
+            pixel.push(img.getPixel(i+1,j-1));
+            pixel.push(img.getPixel(i,j));
+            pixel.push(img.getPixel(i-1,j+1));
+            pixel.push(img.getPixel(i,j+1));
+            pixel.push(img.getPixel(i+1,j));
+            pixel.push(img.getPixel(i+1,j+1));
+            
+            var meansRGB = Array();
+
+            //percorrendo o array de pixels e tirando a média do RGB 
+            //de cada pixel e armazenando o valor da media em outro array
+            for( x = 0; x < pixel.length; x++){
+                var red = pixel[x].red;
+                var blue = pixel[x].blue;
+                var green = pixel[x].green;
+                var meanRGB = (red + blue + green) / 3;
+                meansRGB.push(meanRGB);
+            }
+
+            
+            var sum = 0;
+            for(y = 0; y < meansRGB.length; y++){
+                sum += meansRGB[y];
+            }
+
+            var mean = sum / meansRGB.length;
+            img.setPixel(i, j, mean);
+        }
+    }
+    context.putImageData(img.imageData, 0, 0);
+}
+
+let medianSuavization = function() {
     let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
     let img = new MatrixImage(imageData);
     for (var i = 0; i < img.width; i++) {
@@ -70,7 +125,72 @@ let median = function() {
             pixel.push(img.getPixel(i+1,j).red);
             pixel.push(img.getPixel(i+1,j+1).red);
             pixel.sort();
-            var gray = pixel[5];
+            var color = pixel[4];
+    
+            img.setPixel(i, j, new RGBColor(color, color, color));
+        }
+    }
+    context.putImageData(img.imageData, 0, 0);
+}
+
+let gaussianBlur = function() {
+    
+    let radius = 3;
+    let sigma = 1.5;
+    let kernelWidth = 9;
+
+    var kernel = [[0.0,0.0,0.0]
+                  [0.0,0.0,0.0]
+                  [0.0,0.0,0.0]];
+    
+    let sum = 0.0;
+
+    for(x = 0; x < radius; x++) {
+        for(y = 0; y < radius; y++){
+            let exponentNumerator = (-(x*x+y*y));
+            let exponentDenominator = (2 * sigma * sigma);
+
+            let eExpression = Math.pow(exponentNumerator /exponentDenominator);
+            let kernelValue = (eExpression / (2 * Math.PI * sigma * sigma));
+
+            kernel[x + radius][y + radius] = kernelValue;
+            sum += kernelValue;
+        }
+    }
+
+    for(x = 0; x < kernelWidth; x++){
+        for(y = 0; y < kernelWidth; y++){
+            kernel[x][y] /= sum;
+        }
+    }
+
+    for(x = 0; x < radius; x++){
+        for(y = 0; y < radius; y++){
+            var redValue = 0.0;
+            var greenValue = 0.0;
+            var blueValue = 0.0;
+        }
+    }
+
+    
+    
+    let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+    
+    let img = new MatrixImage(imageData);
+    for (var i = 0; i < img.width; i++) {
+        for (var j = 0; j < img.height; j++) {
+            var pixel = Array();
+            pixel.push(img.getPixel(i-1,j-1).red);
+            pixel.push(img.getPixel(i-1,j).red);
+            pixel.push(img.getPixel(i,j-1).red);
+            pixel.push(img.getPixel(i+1,j-1).red);
+            pixel.push(img.getPixel(i,j).red);
+            pixel.push(img.getPixel(i-1,j+1).red);
+            pixel.push(img.getPixel(i,j+1).red);
+            pixel.push(img.getPixel(i+1,j).red);
+            pixel.push(img.getPixel(i+1,j+1).red);
+            pixel.sort();
+            var gray = pixel[4];
     
             img.setPixel(i, j, new RGBColor(gray, gray, gray));
         }
@@ -112,6 +232,8 @@ class MatrixImage {
 }
 
 document.getElementById('btnLoad').addEventListener('click', load);
-document.getElementById('btnGray').addEventListener('click', grayScale);
-document.getElementById('btnMean').addEventListener('click', mean);
-document.getElementById('btnMedian').addEventListener('click', median);
+document.getElementById('btnGrayScaleMean').addEventListener('click', grayScaleMean);
+document.getElementById('btnGrayScaleNTSC').addEventListener('click', grayScaleNTSC);
+document.getElementById('btnMeanSuavization').addEventListener('click', meanSuavization);
+document.getElementById('btnMedianSuavization').addEventListener('click', medianSuavization);
+document.getElementById('btnGaussian').addEventListener('click', gaussianBlur);
