@@ -18,8 +18,9 @@ let load = function (){
     context.drawImage(image, 0, 0);
 }
 
+//RGB to Gray scale with Mean
 let grayScaleMean = function() {
-    load();
+    //load();
     var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
     var data = imageData.data;
     for (var i = 0; i < data.length; i+=4) {
@@ -32,8 +33,9 @@ let grayScaleMean = function() {
     context.putImageData(imageData, 0, 0);
 }
 
+//RGB to Gray scale with NTSC
 let grayScaleNTSC = function() {
-    load();
+    //load();
     var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
     var data = imageData.data;
     for (var i = 0; i < data.length; i+=4) {
@@ -46,8 +48,9 @@ let grayScaleNTSC = function() {
     context.putImageData(imageData, 0, 0);
 }
 
+//Mean Suavization function
 let meanSuavization = function() {
-    load();
+    //load();
     let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
     let img = new MatrixImage(imageData);
     for (var i = 0; i < img.width; i++) {        
@@ -84,132 +87,145 @@ let meanSuavization = function() {
     context.putImageData(img.imageData, 0, 0);
 }
 
+//HSL to RGB function
+function HSLToRGB(h,s,l) {
+    s /= 100;
+    l /= 100;
+  
+    let c = (1 - Math.abs(2 * l - 1)) * s,
+        x = c * (1 - Math.abs((h / 60) % 2 - 1)),
+        m = l - c/2,
+        r = 0,
+        g = 0,
+        b = 0;
+  
+      if (0 <= h && h < 60) {
+          r = c; g = x; b = 0;  
+      } else if (60 <= h && h < 120) {
+          r = x; g = c; b = 0;
+      } else if (120 <= h && h < 180) {
+          r = 0; g = c; b = x;
+      } else if (180 <= h && h < 240) {
+          r = 0; g = x; b = c;
+      } else if (240 <= h && h < 300) {
+          r = x; g = 0; b = c;
+      } else if (300 <= h && h < 360) {
+          r = c; g = 0; b = x;
+    }
+  
+    r = Math.round((r + m) * 255);
+    g = Math.round((g + m) * 255);
+    b = Math.round((b + m) * 255);
+  
+    return new Array(r, g, b);
+}
+  
+//RGB to HSL function
+function rgbToHsl(c) {
+    var r = c[0]/255, g = c[1]/255, b = c[2]/255;
+    var max = Math.max(r, g, b), min = Math.min(r, g, b);
+    var h, s, l = (max + min) / 2;
+
+    if(max == min) {
+        h = s = 0; // achromatic
+    } else {
+        var d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch(max){
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+    }
+    return new Array(h * 360, s * 100, l * 100);
+}
+
+// Median Suavization
 let medianSuavization = function() {
-    load();
+    //load();
     let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
     let img = new MatrixImage(imageData);
-    for (var i = 0; i < img.width; i++) {
-        for (var j = 0; j < img.height; j++) {
-            var pixel = Array();
-            //pegando os pixels do kernel e colocando no array pixel
-            pixel.push(img.getPixel(i-1,j-1));
-            pixel.push(img.getPixel(i-1,j));
-            pixel.push(img.getPixel(i-1,j+1));
-            pixel.push(img.getPixel(i,j-1));
-            pixel.push(img.getPixel(i,j));
-            pixel.push(img.getPixel(i,j+1));
-            pixel.push(img.getPixel(i+1,j-1));
-            pixel.push(img.getPixel(i+1,j));
-            pixel.push(img.getPixel(i+1,j-1));
+    
+    for (var i = 1; i < img.width+1; i++) {        
+        for (var j = 1; j < img.height+1; j++) {   
 
-            var reds = Array();
-            var greens = Array();
-            var blues = Array();
+            var px = Array();
+            px.push(rgbToHsl(img.getPixelArray(i-1,j-1)));
+            px.push(rgbToHsl(img.getPixelArray(i-1,j)));
+            px.push(rgbToHsl(img.getPixelArray(i-1,j+1)));
 
-            for( x = 0; x < pixel.length; x++){
-                reds.push(pixel[x].red);
-                greens.push(pixel[x].green);
-                blues.push(pixel[x].blue);
+            px.push(rgbToHsl(img.getPixelArray(i,j-1)));
+            px.push(rgbToHsl(img.getPixelArray(i,j)));
+            px.push(rgbToHsl(img.getPixelArray(i,j+1)));
+
+            px.push(rgbToHsl(img.getPixelArray(i+1,j-1)));
+            px.push(rgbToHsl(img.getPixelArray(i+1,j)));
+            px.push(rgbToHsl(img.getPixelArray(i+1,j-1)));
+
+            var h = Array();
+            var s = Array();
+            var l = Array();
+
+            for (let index = 0; index < px.length; index++) {
+                h.push(px[index][0]);
+                s.push(px[index][1]); 
+                l.push(px[index][2]); 
             }
 
-            reds.sort();
-            greens.sort();
-            blues.sort();
+            function sortfunction(a, b){
+                return (a - b)
+            }
 
-            var redMedian = reds[4];
-            var greenMedian = greens[4];
-            var blueMedian = blues[4];
-    
-            img.setPixel(i, j, new RGBColor(redMedian, greenMedian, blueMedian));
+            h.sort(sortfunction);
+            s.sort(sortfunction);
+            l.sort(sortfunction);
+
+            var rgb = HSLToRGB(h[4],s[4],l[4]);
+
+            var red = rgb[0];
+            var green = rgb[1];
+            var blue = rgb[2];
+            img.setPixel(i, j, new RGBColor(red, green, blue));
         }
     }
     context.putImageData(img.imageData, 0, 0);
 }
-/* Gaussian Blur
+
+// Gaussian Blur
 let gaussianBlur = function() {
-    
+    //load();
     let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-    let img = new MatrixImage(imageData);
-    //Define a intensidade do desfoque
-    let radius = 3;
-    //desvio padrão
-    let sigma = Math.max((radius/2), 1);
-    //tamanho do kernel
-    let kernelWidth = (2*radius)+1;
-
-    //inicialização do kernel com valores 0.0
-    for(x = 0; x < kernelWidth; x++){
-        for(y = 0; y < kernelWidth; y++){
-            kernel[x][y] = 0.0;
-        }
-    }
     
-    let sum = 0.0;
+    let px = imageData.data;
+    let tempPx = new Uint8ClampedArray(px.length);
+    tempPx.set(px);
 
-    //Preenchendo cada posição do kernel com o respectivo valor da Distribuição Gaussiana
-    //X e Y representam a distância que estamos do pixel do centro.
-    for(x = -radius; x < radius; x++) {
-        for(y = -radius; y < radius; y++){
+    for(i = 0; i < px.length; i++){
+        if(i % 2 ===3 ){ continue;}
 
-            //Definindo a fórmula da distribuição para encontrar o valor do kernel
-            let exponentNumerator = (-(x*x+y*y));
-            let exponentDenominator = (2 * sigma * sigma);
-
-            let eExpression = Math.pow(exponentNumerator / exponentDenominator);
-            let kernelValue = (eExpression / (2 * Math.PI * sigma * sigma));
-
-            //Adicionamos radius aos índices para evitar problemas fora do limite 
-            //porque x e y podem ser negativos
-            kernel[x + radius][y + radius] = kernelValue;
-            sum += kernelValue;
-        }
+        px[i] = (tempPx[i] + 
+                 (tempPx[i - 4]) + 
+                 (tempPx[i + 4]) + 
+                 (tempPx[i - 4 * imageData.width]) + 
+                 (tempPx[i + 4 * imageData.width]) + 
+                 (tempPx[i - 4 * imageData.width - 4]) +
+                 (tempPx[i + 4 * imageData.width + 4]) +
+                 (tempPx[i + 4 * imageData.width - 4]) +
+                 (tempPx[i - 4 * imageData.width + 4]) 
+                 ) / 9;
     }
 
-    //Normalização do kernel
-    //Isso garante que todos os valores do kernel somem 1
-    for(x = 0; x < kernelWidth; x++){
-        for(y = 0; y < kernelWidth; y++){
-            kernel[x][y] /= sum;
-        }
-    }
-
-    // Ignorando as bordas para facilitar a implementação
-    // Isso fará com que uma borda fina ao redor da imagem não seja processada
-    for (var x = radius; x < (img.width - radius); x++) {
-        for (var y = radius; y < (img.height - radius); y++) {
-        
-            var redValue = 0.0;
-            var greenValue = 0.0;
-            var blueValue = 0.0;
-
-            // Esta é a etapa de convolução
-            // Executamos o kernel sobre este agrupamento de pixels centralizado em torno do pixel em (x, y)
-            for(kernelX = -radius; kernelX < radius; kernelX++){
-                for(kernelY = -radius; kernelY < radius; kernelY++){
-
-                    // Carrega o peso para este pixel da matriz de convolução
-                    var kernelValue = kernel[kernelX + radius][kernelY + radius];
-
-                    // Multiplica cada canal pelo peso do pixel conforme especificado pelo kernel
-                    redValue += (img.getPixel(x - kernelX, y - kernelY).red) * kernelValue;
-                    greenValue += (img.getPixel(x - kernelX, y - kernelY).green) * kernelValue;
-                    blueValue += (img.getPixel(x - kernelX, y - kernelY).blue) * kernelValue;
-                }
-            }
-    
-            img.setPixel(x, y, new RGBColor(redValue, greenValue, blueValue));
-        }
-    }
-    context.putImageData(img.imageData, 0, 0);
+    context.putImageData(imageData, 0, 0);
 }
-*/
 
+// Limiarização Binária
 let threshBinaryManual = function(){
-    load();
+    //load();
     let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
     let img = new MatrixImage(imageData);
     let maxValue = 255;
-    let thresh = 121;
+    let thresh = 40;
     for (var i = 0; i < img.width; i++) {        
         for (var j = 0; j < img.height; j++) {   
 
@@ -228,26 +244,150 @@ let threshBinaryManual = function(){
     context.putImageData(img.imageData, 0, 0);
 }
 
-/* rotate90
+//rotate90
 let rotate90 = function(){
-    load2();
-    let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-    let img = new MatrixImage(imageData);
-    
-    var b = img.width - 1;
-
-    for(i = 0; i < img.width; i++){             
-        for(j = 0; j < img.height; j++){        
-            var red = img.getPixel(i,j).red;
-            var green = img.getPixel(i,j).green;
-            var blue = img.getPixel(i,j).blue;
-            img.setPixel(j,b,new RGBColor(red, green, blue));
-        }
-        b--;
-    }
-    context.putImageData(img.imageData, 0, 0);
+    //load();
+    context.clearRect(0,0,canvas.width,canvas.height);
+    context.save();
+    canvas.width = image.height;
+    canvas.height = image.width;
+    context.translate(canvas.width/2,canvas.height/2);
+    context.rotate(Math.PI/2);
+    context.drawImage(image, -image.width/2, -image.height/2);
+    context.restore();
 }
-*/
+
+//Rotate 180
+let rotate180 = function(){
+    //load();
+    context.clearRect(0,0,canvas.width,canvas.height);
+    context.save();
+    context.translate(canvas.width/2,canvas.height/2);
+    context.rotate(180*Math.PI/180);
+    context.drawImage(image, -image.width/2, -image.height/2);
+    context.restore();
+}
+
+//Rotate 270
+let rotate270 = function(){
+    //load();
+    context.clearRect(0,0,canvas.width,canvas.height);
+    context.save();
+    canvas.width = image.height;
+    canvas.height = image.width;
+    context.translate(canvas.width/2,canvas.height/2);
+    context.rotate(270*Math.PI/180);
+    context.drawImage(image, -image.width/2, -image.height/2);
+    context.restore();
+}
+
+//Redimensionamento 4X
+let red4X = function () {
+    //load();
+    let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+    var maxWidth = imageData.width*4;
+    var maxHeight = imageData.height*4;
+    var width = imageData.width;
+    var height = imageData.height;
+
+    if (width > height) {
+        if (width < maxWidth) {
+            height = height * (maxWidth / width);
+            width = maxWidth;
+        }
+    } else {
+        if (height < maxHeight) {
+            width = width * (maxHeight / height);
+            height = maxHeight;
+        }
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+
+    context.drawImage(image, 0, 0, width, height);
+}
+
+//Redimensionamento 2X
+let red2X = function () {
+    //load();
+    let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+    var maxWidth = imageData.width*2;
+    var maxHeight = imageData.height*2;
+    var width = imageData.width;
+    var height = imageData.height;
+
+    if (width > height) {
+        if (width < maxWidth) {
+            height = height * (maxWidth / width);
+            width = maxWidth;
+        }
+    } else {
+        if (height < maxHeight) {
+            width = width * (maxHeight / height);
+            height = maxHeight;
+        }
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+
+    context.drawImage(image, 0, 0, width, height);
+}
+
+//Redimensionamento 1/2
+let red12 = function () {
+    //load();
+    let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+    var maxWidth = imageData.width*0.5;
+    var maxHeight = imageData.height*0.5;
+    var width = imageData.width;
+    var height = imageData.height;
+
+    if (width > height) {
+        if (width > maxWidth) {
+            height = height * (maxWidth / width);
+            width = maxWidth;
+        }
+    } else {
+        if (height < maxHeight) {
+            width = width * (maxHeight / height);
+            height = maxHeight;
+        }
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+
+    context.drawImage(image, 0, 0, width, height);
+}
+
+//Redimensionamento 1/4
+let red14 = function () {
+    //load();
+    let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+    var maxWidth = imageData.width*0.25;
+    var maxHeight = imageData.height*0.25;
+    var width = imageData.width;
+    var height = imageData.height;
+
+    if (width > height) {
+        if (width > maxWidth) {
+            height = height * (maxWidth / width);
+            width = maxWidth;
+        }
+    } else {
+        if (height < maxHeight) {
+            width = width * (maxHeight / height);
+            height = maxHeight;
+        }
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+
+    context.drawImage(image, 0, 0, width, height);
+}
 
 class RGBColor {
     constructor(r, g, b) {
@@ -274,11 +414,32 @@ class MatrixImage {
         );
     }
 
+    getPixelArray(x,y){
+        let position = ((y * (this.width * 4)) + (x * 4));
+
+        return new Array(
+            this.imageData.data[position],   //red
+            this.imageData.data[position+1], //green
+            this.imageData.data[position+2], //blue
+        );
+    }
+
     setPixel(x, y, color) {
         let position = ((y * (this.width * 4)) + (x * 4));
         this.imageData.data[position] = color.red;
         this.imageData.data[position+1] = color.green;
         this.imageData.data[position+2] = color.blue;
+    }
+
+    setPixel2(x, y, color){
+        let position = ((y * (this.width * 4)) + (x * 4));
+        this.imageData[x][y].data[position] = color.red;
+        this.imageData[x][y].data[position + 1] = color.green;
+        this.imageData[x][y].data[position + 2] = color.blue;
+        //image.data[x][y].red = color.red;
+        //image.data[x][y].green = color.green;
+        //image.data[x][y].blue = color.blue;
+        //return image;
     }
 }
 
@@ -287,7 +448,12 @@ document.getElementById('btnGrayScaleMean').addEventListener('click', grayScaleM
 document.getElementById('btnGrayScaleNTSC').addEventListener('click', grayScaleNTSC);
 document.getElementById('btnMeanSuavization').addEventListener('click', meanSuavization);
 document.getElementById('btnMedianSuavization').addEventListener('click', medianSuavization);
-//document.getElementById('btnGaussian').addEventListener('click', gaussianBlur);
+document.getElementById('btnGaussian').addEventListener('click', gaussianBlur);
 document.getElementById('btnthreshBinaryManual').addEventListener('click', threshBinaryManual);
 document.getElementById('btnRotate90').addEventListener('click', rotate90);
-
+document.getElementById('btnRotate180').addEventListener('click', rotate180);
+document.getElementById('btnRotate270').addEventListener('click', rotate270);
+document.getElementById('btnRed4X').addEventListener('click', red4X);
+document.getElementById('btnRed2X').addEventListener('click', red2X);
+document.getElementById('btnRed12').addEventListener('click', red12);
+document.getElementById('btnRed14').addEventListener('click', red14);
